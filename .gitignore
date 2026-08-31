@@ -1,0 +1,11 @@
+.terraform/
+.terragrunt-cache/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars
+*.auto.tfvars
+.terraform.lock.hcl
+.env
+client-config.yml
+.DS_Store
+LOCAL.md
