@@ -2,7 +2,7 @@ name: Catch OCI A1 Capacity
 
 on:
   schedule:
-    - cron: '*/1 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -36,9 +36,9 @@ jobs:
           mkdir -p ~/.oci
           printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=ap-singapore-2\nkey_file=/home/runner/.oci/private_key.pem\n' \
             "$OCI_USER_OCID" "$OCI_FINGERPRINT" "$OCI_TENANCY_OCID" > ~/.oci/config
-          printf '%s\n' "$OCI_PRIVATE_KEY" > ~/.oci/private_key.pem
+          printf '%s\nOCI_API_KEY\n' "$OCI_PRIVATE_KEY" > ~/.oci/private_key.pem
           chmod 600 ~/.oci/config ~/.oci/private_key.pem
-          echo "OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True" >> $GITHUB_ENV
+          echo "SUPPRESS_LABEL_WARNING=True" >> $GITHUB_ENV
 
       - name: Check for existing instance
         id: check
@@ -64,7 +64,6 @@ jobs:
             --shape "VM.Standard.A1.Flex" \
             --shape-config '{"ocpus":1,"memoryInGBs":1}' \
             --subnet-id "$OCI_SUBNET_ID" \
-            --assign-public-ip true \
             --image-id "$OCI_IMAGE_ID" \
             --ssh-authorized-keys-file /tmp/ssh_key.pub \
             --user-data-file live/singapore/anytype-server/cloud-init-rendered.yaml \
