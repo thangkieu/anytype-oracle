@@ -68,6 +68,12 @@ variable "any_sync_bundle_version" {
   default     = "1.4.3-2026-04-21"
 }
 
+variable "availability_domain_index" {
+  description = "Index of the availability domain to use (0, 1, or 2). Change if you get Out of Host Capacity errors."
+  type        = number
+  default     = 0
+}
+
 variable "any_sync_bundle_external_addr" {
   description = "External address advertised to clients (e.g. anytype.example.com). Defaults to auto-detected public IP if empty."
   type        = string

@@ -14,7 +14,7 @@ inputs = {
   region                   = "ap-singapore-2"
   instance_display_name    = "anytype-server"
   instance_ocpus           = 1
-  instance_memory_gb       = 6
+  instance_memory_gb       = 1
   any_sync_bundle_version       = "1.6.0-2026-08-18"
   any_sync_bundle_external_addr = "anytype.purrspective.uk"
 
@@ -22,4 +22,5 @@ inputs = {
 
   # Restrict this to your own IP before applying for real, e.g. "203.0.113.42/32"
   ssh_allowed_cidr = "8.29.230.19/32"
+  availability_domain_index = 0
 }
