@@ -42,20 +42,8 @@ jobs:
           chmod 600 ~/.oci/config ~/.oci/private_key.pem
           echo "SUPPRESS_LABEL_WARNING=True" >> $GITHUB_ENV
 
-      - name: Check for existing instance
-        id: check
-        run: |
-          count=$(oci compute instance list \
-            --compartment-id "$OCI_COMPARTMENT_ID" \
-            --display-name "anytype-server" \
-            --lifecycle-state RUNNING \
-            --query 'length(data)' \
-            --raw-output 2>/dev/null || echo "0")
-          echo "RUNNING=$count" >> $GITHUB_OUTPUT
-
       - name: Attempt instance launch
         id: launch
-        if: steps.check.outputs.RUNNING == '0'
         run: |
           echo "${{ secrets.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
 
