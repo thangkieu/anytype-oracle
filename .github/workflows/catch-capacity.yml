@@ -5,12 +5,26 @@ on:
     - cron: '*/1 * * * *'
   workflow_dispatch:
 
+env:
+  OCI_TENANCY_OCID: ocid1.tenancy.oc1..aaaaaaaadbb3i24u2iec2glrdthme7xr7keud7t75c6sfusp727oxkgext5a
+  OCI_COMPARTMENT_ID: ocid1.tenancy.oc1..aaaaaaaadbb3i24u2iec2glrdthme7xr7keud7t75c6sfusp727oxkgext5a
+  OCI_SUBNET_ID: ocid1.subnet.oc1.ap-singapore-2.aaaaaaaaf7fjtngw4tftufu52gj5paf6o6t5lovtsabds3cpirtfsmy4tqva
+  OCI_IMAGE_ID: ocid1.image.oc1.ap-singapore-2.aaaaaaaaqirax23qxsz7bjvy5tzxpanjyoucxwa4ysyw6orr3xqldg4rn2pa
+  OCI_USER_OCID: ${{ vars.OCI_USER_OCID }}
+  OCI_FINGERPRINT: ${{ vars.OCI_FINGERPRINT }}
+
 jobs:
   catch:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: oci-cli-${{ runner.os }}
 
       - name: Install OCI CLI
         run: pip install oci-cli
@@ -22,20 +36,21 @@ jobs:
           mkdir -p ~/.oci
           cat > ~/.oci/config << EOF
           [DEFAULT]
-          user=${{ secrets.OCI_USER_OCID }}
-          fingerprint=${{ secrets.OCI_FINGERPRINT }}
-          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          user=$OCI_USER_OCID
+          fingerprint=$OCI_FINGERPRINT
+          tenancy=$OCI_TENANCY_OCID
           region=ap-singapore-2
           key_file=/home/runner/.oci/private_key.pem
           EOF
           printf '%s\n' "$OCI_PRIVATE_KEY" > ~/.oci/private_key.pem
           chmod 600 ~/.oci/private_key.pem
+          echo "SUPPRESS_LABEL_WARNING=True" >> $GITHUB_ENV
 
       - name: Check for existing instance
         id: check
         run: |
           count=$(oci compute instance list \
-            --compartment-id "${{ secrets.OCI_COMPARTMENT_ID }}" \
+            --compartment-id "$OCI_COMPARTMENT_ID" \
             --display-name "anytype-server" \
             --lifecycle-state RUNNING \
             --query 'length(data)' \
@@ -50,13 +65,14 @@ jobs:
           USERDATA=$(base64 -w 0 live/singapore/anytype-server/cloud-init-rendered.yaml)
 
           result=$(oci compute instance launch \
-            --compartment-id "${{ secrets.OCI_COMPARTMENT_ID }}" \
+            --compartment-id "$OCI_COMPARTMENT_ID" \
             --display-name "anytype-server" \
             --availability-domain "NjDi:AP-SINGAPORE-2-AD-1" \
             --shape "VM.Standard.A1.Flex" \
             --shape-config '{"ocpus":1,"memoryInGBs":1}' \
-            --create-vnic-details "{\"subnetId\":\"${{ secrets.OCI_SUBNET_ID }}\",\"assignPublicIp\":true}" \
-            --image-id "${{ secrets.OCI_IMAGE_ID }}" \
+            --subnet-id "$OCI_SUBNET_ID" \
+            --assign-public-ip true \
+            --image-id "$OCI_IMAGE_ID" \
             --ssh-authorized-keys-file /tmp/ssh_key.pub \
             --user-data "$USERDATA" \
             --no-retry 2>&1) && EXIT=0 || EXIT=$?
