@@ -20,14 +20,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache pip
+      - name: Cache OCI CLI
+        id: cache-oci
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: oci-cli-${{ runner.os }}
+          path: ~/.local
+          key: oci-cli-3.92.0-${{ runner.os }}
 
       - name: Install OCI CLI
-        run: pip install oci-cli
+        if: steps.cache-oci.outputs.cache-hit != 'true'
+        run: pip install oci-cli==3.92.0
 
       - name: Setup OCI credentials
         env:
