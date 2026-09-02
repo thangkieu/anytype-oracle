@@ -52,7 +52,7 @@ jobs:
             --display-name "anytype-server" \
             --availability-domain "NjDi:AP-SINGAPORE-2-AD-1" \
             --shape "VM.Standard.A1.Flex" \
-            --shape-config '{"ocpus":1,"memoryInGBs":1}' \
+            --shape-config '{"ocpus":1,"memoryInGBs":2}' \
             --subnet-id "$OCI_SUBNET_ID" \
             --image-id "$OCI_IMAGE_ID" \
             --ssh-authorized-keys-file /tmp/ssh_key.pub \

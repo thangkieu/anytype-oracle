@@ -14,7 +14,7 @@ inputs = {
   region                   = "ap-singapore-2"
   instance_display_name    = "anytype-server"
   instance_ocpus           = 1
-  instance_memory_gb       = 1
+  instance_memory_gb       = 2
   any_sync_bundle_version       = "1.6.0-2026-08-18"
   any_sync_bundle_external_addr = "anytype.purrspective.uk"
 
