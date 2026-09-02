@@ -6,16 +6,18 @@ on:
   workflow_dispatch:
 
 env:
-  OCI_TENANCY_OCID: ocid1.tenancy.oc1..aaaaaaaadbb3i24u2iec2glrdthme7xr7keud7t75c6sfusp727oxkgext5a
-  OCI_COMPARTMENT_ID: ocid1.tenancy.oc1..aaaaaaaadbb3i24u2iec2glrdthme7xr7keud7t75c6sfusp727oxkgext5a
-  OCI_SUBNET_ID: ocid1.subnet.oc1.ap-singapore-2.aaaaaaaaf7fjtngw4tftufu52gj5paf6o6t5lovtsabds3cpirtfsmy4tqva
-  OCI_IMAGE_ID: ocid1.image.oc1.ap-singapore-2.aaaaaaaaqirax23qxsz7bjvy5tzxpanjyoucxwa4ysyw6orr3xqldg4rn2pa
+  OCI_TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
+  OCI_COMPARTMENT_ID: ${{ vars.OCI_COMPARTMENT_ID }}
+  OCI_SUBNET_ID: ${{ vars.OCI_SUBNET_ID }}
+  OCI_IMAGE_ID: ${{ vars.OCI_IMAGE_ID }}
   OCI_USER_OCID: ${{ vars.OCI_USER_OCID }}
   OCI_FINGERPRINT: ${{ vars.OCI_FINGERPRINT }}
+
 
 jobs:
   catch:
     runs-on: ubuntu-latest
+    environment: PRD
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +64,6 @@ jobs:
         if: steps.check.outputs.RUNNING == '0'
         run: |
           echo "${{ secrets.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
-          USERDATA=$(base64 -w 0 live/singapore/anytype-server/cloud-init-rendered.yaml)
 
           result=$(oci compute instance launch \
             --compartment-id "$OCI_COMPARTMENT_ID" \
@@ -74,7 +75,7 @@ jobs:
             --assign-public-ip true \
             --image-id "$OCI_IMAGE_ID" \
             --ssh-authorized-keys-file /tmp/ssh_key.pub \
-            --user-data "$USERDATA" \
+            --user-data-file live/singapore/anytype-server/cloud-init-rendered.yaml \
             --no-retry 2>&1) && EXIT=0 || EXIT=$?
 
           echo "$result"
