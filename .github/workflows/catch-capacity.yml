@@ -1,0 +1,82 @@
+name: Catch OCI A1 Capacity
+
+on:
+  schedule:
+    - cron: '*/1 * * * *'
+  workflow_dispatch:
+
+jobs:
+  catch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OCI CLI
+        run: pip install oci-cli
+
+      - name: Setup OCI credentials
+        env:
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.oci
+          cat > ~/.oci/config << EOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=ap-singapore-2
+          key_file=/home/runner/.oci/private_key.pem
+          EOF
+          printf '%s\n' "$OCI_PRIVATE_KEY" > ~/.oci/private_key.pem
+          chmod 600 ~/.oci/private_key.pem
+
+      - name: Check for existing instance
+        id: check
+        run: |
+          count=$(oci compute instance list \
+            --compartment-id "${{ secrets.OCI_COMPARTMENT_ID }}" \
+            --display-name "anytype-server" \
+            --lifecycle-state RUNNING \
+            --query 'length(data)' \
+            --raw-output 2>/dev/null || echo "0")
+          echo "RUNNING=$count" >> $GITHUB_OUTPUT
+
+      - name: Attempt instance launch
+        id: launch
+        if: steps.check.outputs.RUNNING == '0'
+        run: |
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" > /tmp/ssh_key.pub
+          USERDATA=$(base64 -w 0 live/singapore/anytype-server/cloud-init-rendered.yaml)
+
+          result=$(oci compute instance launch \
+            --compartment-id "${{ secrets.OCI_COMPARTMENT_ID }}" \
+            --display-name "anytype-server" \
+            --availability-domain "NjDi:AP-SINGAPORE-2-AD-1" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":1,"memoryInGBs":1}' \
+            --create-vnic-details "{\"subnetId\":\"${{ secrets.OCI_SUBNET_ID }}\",\"assignPublicIp\":true}" \
+            --image-id "${{ secrets.OCI_IMAGE_ID }}" \
+            --ssh-authorized-keys-file /tmp/ssh_key.pub \
+            --user-data "$USERDATA" \
+            --no-retry 2>&1) && EXIT=0 || EXIT=$?
+
+          echo "$result"
+
+          if [ $EXIT -eq 0 ]; then
+            OCID=$(echo "$result" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['id'])")
+            echo "INSTANCE_OCID=$OCID" >> $GITHUB_OUTPUT
+            echo "SUCCESS=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Success summary
+        if: steps.launch.outputs.SUCCESS == 'true'
+        run: |
+          echo "## Instance Created!" >> $GITHUB_STEP_SUMMARY
+          echo "**OCID:** \`${{ steps.launch.outputs.INSTANCE_OCID }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Import into Terraform:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "cd live/singapore/anytype-server" >> $GITHUB_STEP_SUMMARY
+          echo "terragrunt import oci_core_instance.anytype_server ${{ steps.launch.outputs.INSTANCE_OCID }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
